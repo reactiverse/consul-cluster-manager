@@ -275,12 +275,7 @@ public class ConsulClusterManager extends ConsulMap<String, String> implements C
         .compose(aVoid -> createTcpServer())
         .compose(aVoid -> registerService())
         .compose(aVoid -> registerTcpCheck())
-        .compose(aVoid ->
-          registerSession("Session for ephemeral keys for: " + appContext.getNodeId(), checkId)
-            .compose(s -> {
-              appContext.setEphemeralSessionId(s);
-              return succeededFuture();
-            }))
+        .compose(aVoid -> registerSessionAndSave())
         .compose(aVoid -> {
           startListening(); // start a watch to listen for an updates on _vertx.nodes.
           return clearHaInfoMap();
@@ -338,6 +333,18 @@ public class ConsulClusterManager extends ConsulMap<String, String> implements C
   @Override
   public boolean isActive() {
     return active;
+  }
+
+
+  /**
+   * Gets the session registered in consul agent and if this successes -> get it saved within {@link ClusterManagerInternalContext}.
+   */
+  private Future<Void> registerSessionAndSave() {
+    return registerSession("Session for ephemeral keys for: " + appContext.getNodeId(), checkId)
+      .compose(s -> {
+        appContext.setEphemeralSessionId(s);
+        return succeededFuture();
+      });
   }
 
   /**

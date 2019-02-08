@@ -50,6 +50,7 @@
   <properties>
     <stack.version>3.6.0</stack.version>
     <junit.version>4.12</junit.version>
+    <embedded.consul.version>1.1.1</embedded.consul.version>
   </properties>
 
   <dependencyManagement>
@@ -63,6 +64,12 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
+
+  <scm>
+    <connection>scm:git:git@github.com:reactiverse/consul-cluster-manager.git</connection>
+    <developerConnection>scm:git:git@github.com:reactiverse/consul-cluster-manager.git</developerConnection>
+    <url>git@github.com:reactiverse/consul-cluster-manager.git</url>
+  </scm>
 
   <dependencies>
     <dependency>
@@ -97,7 +104,7 @@
     <dependency>
       <groupId>com.pszymczyk.consul</groupId>
       <artifactId>embedded-consul</artifactId>
-      <version>1.1.1</version>
+      <version>${embedded.consul.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
