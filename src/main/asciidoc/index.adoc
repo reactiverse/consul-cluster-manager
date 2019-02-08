@@ -1,0 +1,3 @@
+= Consul Cluster Manager
+
+This is a cluster manager implementation for Vert.x ecosystem that uses https://www.consul.io/[Consul].
