@@ -1,6 +1,6 @@
 # Consul cluster manager for Vert.x ecosystem #
 
-[![Build Status](https://travis-ci.com/reactiverse/consul-cluster-manager.svg?branch=master)](https://travis-ci.com/reactiverse/consul-cluster-manager)
+[![Build Status](https://travis-ci.org/reactiverse/consul-cluster-manager.svg?branch=master)](https://travis-ci.com/reactiverse/consul-cluster-manager)
 
 **Introduction**
 -
