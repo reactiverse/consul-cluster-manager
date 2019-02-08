@@ -5,8 +5,6 @@
 **Introduction**
 -
 
-IMPORTANT: This project has just got migrated from https://github.com/romalev/consul-cluster-manager and will get <b>ACTIVE</b> soon. Some things are still to be <b>UPDATED</b>!
-
 Consul - based cluster manager that is plugable into Vert.x ecosystem. **[Consul](https://www.consul.io/)** is a distributed, highly available, and data center aware solution to connect and configure applications across dynamic, distributed infrastructure.
 
 **Motivation**
