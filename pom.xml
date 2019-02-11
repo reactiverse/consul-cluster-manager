@@ -161,6 +161,9 @@
           <artifactId>maven-surefire-plugin</artifactId>
           <configuration>
             <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
+            <includes>
+              <include>**/ConsulClusterManagerTestSuite.class</include>
+            </includes>
             <systemPropertyVariables>
               <io.netty.leakDetectionLevel>PARANOID</io.netty.leakDetectionLevel>
               <buildDirectory>${project.build.directory}</buildDirectory>
