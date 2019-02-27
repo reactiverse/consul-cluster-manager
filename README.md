@@ -33,30 +33,21 @@ Current consul cluster manager implementation is fully based on [**vertx-consul-
 
 **How to use**
 -
+## Version compatibility matrix
+| Project | Vert.x |
+| ------- | ------ | 
+|  0.1.x  | 3.6.0  | 
+|  TBR    | 3.6.1  | 
+|  TBR    | 3.6.2  | 
+|  TBR    | 3.6.3  | 
 
 ### Gradle
 ```groovy
-
-repositories {
-    //...
-    maven { url 'https://jitpack.io' }
-}
-
 compile 'io.reactiverse:vertx-consul-cluster-manager:${cluster-manager-version}'
 ```
 
 ### Maven
 ```xml
-
-<project>
-  <repositories>
-    <repository>
-      <id>jitpack</id>
-      <url>https://jitpack.io</url>
-    </repository>
-  </repositories>
-</project>
-
 <dependency>
   <groupId>io.reactiverse</groupId>
   <artifactId>vertx-consul-cluster-manager</artifactId>
