@@ -33,7 +33,8 @@
   <url>https://github.com/reactiverse/consul-cluster-manager</url>
   <description>Consul - based cluster manager that can be hooked into Vert.x ecosystem.</description>
 
-  <!-- maven staging: mvn verify gpg:sign install:install deploy:deploy -DskipTests=True -->
+  <!--
+  maven staging: mvn verify gpg:sign install:install deploy:deploy -DskipTests=True
   <distributionManagement>
     <snapshotRepository>
       <id>ossrh</id>
@@ -44,6 +45,7 @@
       <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
     </repository>
   </distributionManagement>
+  -->
 
   <licenses>
     <license>
