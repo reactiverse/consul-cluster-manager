@@ -28,7 +28,7 @@
 
   <groupId>io.reactiverse</groupId>
   <artifactId>consul-cluster-manager</artifactId>
-  <version>0.2.0-SNAPSHOT</version>
+  <version>0.3.0-SNAPSHOT</version>
   <name>Vert.x Consul Cluster Manager</name>
   <url>https://github.com/reactiverse/consul-cluster-manager</url>
   <description>Consul - based cluster manager that can be hooked into Vert.x ecosystem.</description>
@@ -63,7 +63,7 @@
   </developers>
 
   <properties>
-    <stack.version>3.6.1</stack.version>
+    <stack.version>3.6.2</stack.version>
     <junit.version>4.12</junit.version>
     <embedded.consul.version>1.1.1</embedded.consul.version>
   </properties>
