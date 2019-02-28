@@ -163,7 +163,10 @@ public class ConsulClusterManager extends ConsulMap<String, String> implements C
   @Override
   public <K, V> void getAsyncMultiMap(String name, Handler<AsyncResult<AsyncMultiMap<K, V>>> asyncResultHandler) {
     Future<AsyncMultiMap<K, V>> futureAsyncMultiMap = Future.future();
-    AsyncMultiMap asyncMultiMap = asyncMultiMaps.computeIfAbsent(name, key -> new ConsulAsyncMultiMap<>(name, preferConsistency, appContext));
+    AsyncMultiMap asyncMultiMap = asyncMultiMaps.computeIfAbsent(name,
+      key -> preferConsistency ?
+        new ConsulAsyncMultiMap<>(name, appContext) :
+        new ConsulCacheableAsyncMultiMap<>(name, appContext));
     futureAsyncMultiMap.complete(asyncMultiMap);
     futureAsyncMultiMap.setHandler(asyncResultHandler);
   }
