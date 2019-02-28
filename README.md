@@ -40,7 +40,7 @@ Version compatibility matrix
 |  0.1.x           | 3.6.0  | 
 |  0.2.x           | 3.6.1  | 
 |  0.3.x           | 3.6.2  | 
-|  TBR             | 3.6.3  | 
+|  0.4.x           | 3.6.3  | 
 
 ### Gradle
 ```groovy
