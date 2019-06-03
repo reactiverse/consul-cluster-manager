@@ -127,7 +127,7 @@ public class ConsulClusterManager extends ConsulMap<String, String> implements C
    * Example:
    * <pre>
    * JsonObject options = new JsonObject()
-   *  .put("host", "localhost")
+   *  .put("host", "consulAgentHost")
    *  .put("port", consulAgentPort)
    *  .put("preferConsistency", true);
    * </pre>
