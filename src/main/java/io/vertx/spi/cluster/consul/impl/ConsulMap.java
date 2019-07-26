@@ -17,13 +17,24 @@ package io.vertx.spi.cluster.consul.impl;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.VertxException;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.consul.*;
+import io.vertx.ext.consul.KeyValue;
+import io.vertx.ext.consul.KeyValueList;
+import io.vertx.ext.consul.KeyValueOptions;
+import io.vertx.ext.consul.SessionBehavior;
+import io.vertx.ext.consul.SessionOptions;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -81,7 +92,7 @@ public abstract class ConsulMap<K, V> extends ConsulMapListener {
    * @return {@link Future}} containing result.
    */
   protected Future<Boolean> putPlainValue(String key, String value, KeyValueOptions keyValueOptions) {
-    Future<Boolean> future = Future.future();
+    Promise<Boolean> promise = Promise.promise();
     appContext.getConsulClient().putValueWithOptions(key, value, keyValueOptions, resultHandler -> {
       if (resultHandler.succeeded()) {
         if (log.isTraceEnabled()) {
@@ -92,13 +103,13 @@ public abstract class ConsulMap<K, V> extends ConsulMapListener {
             log.trace(traceMessage);
           }
         }
-        future.complete(resultHandler.result());
+        promise.complete(resultHandler.result());
       } else {
         log.error("[" + appContext.getNodeId() + "]" + " - Failed to put " + key + " -> " + value, resultHandler.cause());
-        future.fail(resultHandler.cause());
+        promise.fail(resultHandler.cause());
       }
     });
-    return future;
+    return promise.future();
   }
 
   /**
@@ -121,20 +132,20 @@ public abstract class ConsulMap<K, V> extends ConsulMapListener {
    * @return @return {@link Future}} containing result.
    */
   Future<KeyValue> getPlainValue(String consulKey) {
-    Future<KeyValue> future = Future.future();
+    Promise<KeyValue> promise = Promise.promise();
     appContext.getConsulClient().getValue(consulKey, resultHandler -> {
       if (resultHandler.succeeded()) {
         // note: resultHandler.result().getValue() is null if nothing was found.
         if (log.isTraceEnabled()) {
           log.trace("[" + appContext.getNodeId() + "]" + " - Entry is found : " + resultHandler.result().getValue() + " by key: " + consulKey);
         }
-        future.complete(resultHandler.result());
+        promise.complete(resultHandler.result());
       } else {
         log.error("[" + appContext.getNodeId() + "]" + " - Failed to look up an entry by: " + consulKey, resultHandler.cause());
-        future.fail(resultHandler.cause());
+        promise.fail(resultHandler.cause());
       }
     });
-    return future;
+    return promise.future();
   }
 
   /**
@@ -175,45 +186,45 @@ public abstract class ConsulMap<K, V> extends ConsulMapListener {
    * @return @return {@link Future}} containing result.
    */
   protected Future<Boolean> deleteValueByKeyPath(String keyPath) {
-    Future<Boolean> result = Future.future();
+    Promise<Boolean> promise = Promise.promise();
     appContext.getConsulClient().deleteValue(keyPath, resultHandler -> {
       if (resultHandler.succeeded()) {
         if (log.isTraceEnabled()) {
           log.trace("[" + appContext.getNodeId() + "] " + keyPath + " -> " + " remove is true.");
         }
-        result.complete(true);
+        promise.complete(true);
       } else {
-        log.error("[" + appContext.getNodeId() + "]" + " - Failed to remove an entry by keyPath: " + keyPath, result.cause());
-        result.fail(resultHandler.cause());
+        log.error("[" + appContext.getNodeId() + "]" + " - Failed to remove an entry by keyPath: " + keyPath, resultHandler.cause());
+        promise.fail(resultHandler.cause());
       }
     });
-    return result;
+    return promise.future();
   }
 
   /**
    * Deletes the entire map.
    */
   Future<Void> deleteAll() {
-    Future<Void> future = Future.future();
+    Promise<Void> promise = Promise.promise();
     appContext.getConsulClient().deleteValues(name, result -> {
       if (result.succeeded()) {
         if (log.isTraceEnabled()) {
           log.trace("[" + appContext.getNodeId() + "] - has removed all of: " + name);
         }
-        future.complete();
+        promise.complete();
       } else {
         log.error("[" + appContext.getNodeId() + "]" + " - Failed to clear an entire: " + name);
-        future.fail(result.cause());
+        promise.fail(result.cause());
       }
     });
-    return future;
+    return promise.future();
   }
 
   /**
    * @return {@link Future} of plain consul kv map's keys.
    */
   protected Future<List<String>> plainKeys() {
-    Future<List<String>> futureKeys = Future.future();
+    Promise<List<String>> futureKeys = Promise.promise();
     appContext.getConsulClient().getKeys(name, resultHandler -> {
       if (resultHandler.succeeded()) {
         if (log.isTraceEnabled()) {
@@ -225,22 +236,22 @@ public abstract class ConsulMap<K, V> extends ConsulMapListener {
         futureKeys.fail(resultHandler.cause());
       }
     });
-    return futureKeys;
+    return futureKeys.future();
   }
 
   /**
    * @return {@link Future} of plain consul kv map's entries.
    */
   Future<List<KeyValue>> plainEntries() {
-    Future<List<KeyValue>> keyValueListFuture = Future.future();
+    Promise<List<KeyValue>> keyValueListPromise = Promise.promise();
     appContext.getConsulClient().getValues(name, resultHandler -> {
-      if (resultHandler.succeeded()) keyValueListFuture.complete(nullSafeListResult(resultHandler.result()));
+      if (resultHandler.succeeded()) keyValueListPromise.complete(nullSafeListResult(resultHandler.result()));
       else {
         log.error("[" + appContext.getNodeId() + "]" + " - Failed to fetch entries of: " + name, resultHandler.cause());
-        keyValueListFuture.fail(resultHandler.cause());
+        keyValueListPromise.fail(resultHandler.cause());
       }
     });
-    return keyValueListFuture;
+    return keyValueListPromise.future();
   }
 
   /**
@@ -251,7 +262,7 @@ public abstract class ConsulMap<K, V> extends ConsulMapListener {
    * @return {@link Future} session id.
    */
   protected Future<String> registerSession(String sessionName, String checkId) {
-    Future<String> future = Future.future();
+    Promise<String> promise = Promise.promise();
     SessionOptions sessionOptions = new SessionOptions()
       .setBehavior(SessionBehavior.DELETE)
       .setLockDelay(0)
@@ -263,32 +274,32 @@ public abstract class ConsulMap<K, V> extends ConsulMapListener {
         if (log.isTraceEnabled()) {
           log.trace("[" + appContext.getNodeId() + "]" + " - " + sessionName + ": " + session.result() + " has been registered.");
         }
-        future.complete(session.result());
+        promise.complete(session.result());
       } else {
         log.error("[" + appContext.getNodeId() + "]" + " - Failed to register the session.", session.cause());
-        future.fail(session.cause());
+        promise.fail(session.cause());
       }
     });
-    return future;
+    return promise.future();
   }
 
   /**
    * Destroys node's session in consul.
    */
   protected Future<Void> destroySession(String sessionId) {
-    Future<Void> future = Future.future();
+    Promise<Void> promise = Promise.promise();
     appContext.getConsulClient().destroySession(sessionId, resultHandler -> {
       if (resultHandler.succeeded()) {
         if (log.isTraceEnabled()) {
           log.trace("[" + appContext.getNodeId() + "]" + " - Session: " + sessionId + " has been successfully destroyed.");
         }
-        future.complete();
+        promise.complete();
       } else {
         log.error("[" + appContext.getNodeId() + "]" + " - Failed to destroy session: " + sessionId, resultHandler.cause());
-        future.fail(resultHandler.cause());
+        promise.fail(resultHandler.cause());
       }
     });
-    return future;
+    return promise.future();
   }
 
   /**

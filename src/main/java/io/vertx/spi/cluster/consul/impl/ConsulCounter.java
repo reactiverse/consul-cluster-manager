@@ -16,8 +16,8 @@
 package io.vertx.spi.cluster.consul.impl;
 
 import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.shareddata.Counter;
 import io.vertx.ext.consul.KeyValue;
 import io.vertx.ext.consul.KeyValueOptions;
@@ -95,14 +95,14 @@ public class ConsulCounter extends ConsulMap<String, Long> implements Counter {
     Objects.requireNonNull(resultHandler);
     getPlainValue(consulKey)
       .compose(keyValue -> {
-        Future<Boolean> result = Future.future();
+        Promise<Boolean> promise = Promise.promise();
         final Long preValue = extractActualCounterValue(keyValue);
         if (preValue == expected) {
-          putPlainValue(consulKey, String.valueOf(value), null).setHandler(result.completer());
+          putPlainValue(consulKey, String.valueOf(value), null).setHandler(promise);
         } else {
-          result.complete(false);
+          promise.complete(false);
         }
-        return result;
+        return promise.future();
       })
       .setHandler(resultHandler);
   }
@@ -114,7 +114,7 @@ public class ConsulCounter extends ConsulMap<String, Long> implements Counter {
     Objects.requireNonNull(resultHandler);
     getPlainValue(consulKey)
       .compose(keyValue -> {
-        Future<Long> result = Future.future();
+        Promise<Long> result = Promise.promise();
         final Long preValue = extractActualCounterValue(keyValue);
         final Long postValue = preValue + value;
         putPlainValue(consulKey, String.valueOf(postValue), new KeyValueOptions().setCasIndex(keyValue.getModifyIndex()))
@@ -124,13 +124,13 @@ public class ConsulCounter extends ConsulMap<String, Long> implements Counter {
                 result.complete(postGet ? postValue : preValue);
               } else {
                 // do retry until succeeded
-                calculateAndCompareAndSwap(postGet, value, result.completer());
+                calculateAndCompareAndSwap(postGet, value, result);
               }
             } else {
               result.fail(putRes.cause());
             }
           });
-        return result;
+        return result.future();
       })
       .setHandler(resultHandler);
   }

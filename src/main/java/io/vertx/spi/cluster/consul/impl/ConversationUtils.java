@@ -16,11 +16,20 @@
 package io.vertx.spi.cluster.consul.impl;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.shareddata.impl.ClusterSerializable;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
 import java.lang.reflect.Constructor;
 import java.util.Base64;
 import java.util.Optional;
@@ -103,30 +112,30 @@ class ConversationUtils {
    * {@link Future} wrapper around asString.
    */
   static <K, V> Future<String> asFutureString(K key, V value, String nodeId) {
-    Future<String> result = Future.future();
+    Promise<String> result = Promise.promise();
     try {
       result.complete(asString(key, value, nodeId, Optional.empty()));
     } catch (IOException e) {
       result.fail(e);
     }
-    return result;
+    return result.future();
   }
 
   /**
    * {@link Future} wrapper around asString that takes into account TTL.
    */
   static <K, V> Future<String> asFutureString(K key, V value, String nodeId, Long ttl) {
-    Future<String> result = Future.future();
+    Promise<String> result = Promise.promise();
     try {
       result.complete(asString(key, value, nodeId, Optional.ofNullable(ttl)));
     } catch (IOException e) {
       result.fail(e);
     }
-    return result;
+    return result.future();
   }
 
   static <K, V> Future<ConsulEntry<K, V>> asFutureConsulEntry(String object) {
-    Future<ConsulEntry<K, V>> result = Future.future();
+    Promise<ConsulEntry<K, V>> result = Promise.promise();
     if (object == null) result.complete();
     else {
       try {
@@ -135,7 +144,7 @@ class ConversationUtils {
         result.fail(e);
       }
     }
-    return result;
+    return result.future();
   }
 
   /**
