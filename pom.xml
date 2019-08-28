@@ -15,8 +15,8 @@
   ~ limitations under the License.
   ~
   -->
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
@@ -28,7 +28,7 @@
 
   <groupId>io.reactiverse</groupId>
   <artifactId>consul-cluster-manager</artifactId>
-  <version>1.1.0</version>
+  <version>1.2.0</version>
   <name>Vert.x Consul Cluster Manager</name>
   <url>https://github.com/reactiverse/consul-cluster-manager</url>
   <description>Consul - based cluster manager that can be hooked into Vert.x ecosystem.</description>
@@ -63,7 +63,7 @@
   </developers>
 
   <properties>
-    <stack.version>3.7.1</stack.version>
+    <stack.version>3.8.0</stack.version>
     <junit.version>4.12</junit.version>
     <embedded.consul.version>2.1.2</embedded.consul.version>
   </properties>

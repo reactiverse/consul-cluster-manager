@@ -19,6 +19,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.impl.TaskQueue;
 import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.json.Json;
@@ -41,7 +42,9 @@ import java.util.stream.Collectors;
 
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
-import static io.vertx.spi.cluster.consul.impl.ConversationUtils.*;
+import static io.vertx.spi.cluster.consul.impl.ConversationUtils.asConsulEntry;
+import static io.vertx.spi.cluster.consul.impl.ConversationUtils.asFutureConsulEntry;
+import static io.vertx.spi.cluster.consul.impl.ConversationUtils.asFutureString;
 
 /**
  * Distributed async multimap implementation backed by consul kv store. IMPORTANT: the purpose of async multimap in vertx cluster management is to hold mapping between
@@ -89,6 +92,10 @@ public class ConsulAsyncMultiMap<K, V> extends ConsulMap<K, V> implements AsyncM
       cache = new ConcurrentHashMap<>();
       startListening();
     }
+  }
+
+  private static String getRidOfNodeId(String consulKeyPath) {
+    return consulKeyPath.substring(0, consulKeyPath.lastIndexOf("/"));
   }
 
   @Override
@@ -186,7 +193,7 @@ public class ConsulAsyncMultiMap<K, V> extends ConsulMap<K, V> implements AsyncM
    * TODO: Is there any way in vert.x ecosystem to execute tasks on the event loop by not giving up an order ?
    */
   private Future<ChoosableSet<V>> doGet(K key) {
-    Future<ChoosableSet<V>> out = Future.future();
+    Promise<ChoosableSet<V>> out = Promise.promise();
     VertxInternal vertxInternal = (VertxInternal) appContext.getVertx();
     vertxInternal.getOrCreateContext().<ChoosableSet<V>>executeBlocking(event -> {
       Future<ChoosableSet<V>> future = preferConsistency
@@ -194,7 +201,7 @@ public class ConsulAsyncMultiMap<K, V> extends ConsulMap<K, V> implements AsyncM
       ChoosableSet<V> choosableSet = completeAndGet(future, 5000);
       event.complete(choosableSet);
     }, taskQueue, res -> out.complete(res.result()));
-    return out;
+    return out.future();
   }
 
   private Future<ChoosableSet<V>> cacheableGet(K key) {
@@ -280,10 +287,10 @@ public class ConsulAsyncMultiMap<K, V> extends ConsulMap<K, V> implements AsyncM
    * Returns an set of an internal {@link ConsulEntry} all entries filtered by specified consul key path.
    */
   private Future<Set<ConsulEntry<K, Set<V>>>> getAll(String consulKey) {
-    Future<KeyValueList> future = Future.future();
-    appContext.getConsulClient().getValues(consulKey, future.completer());
+    Promise<KeyValueList> promise = Promise.promise();
+    appContext.getConsulClient().getValues(consulKey, promise);
 
-    return future.compose(keyValueList -> {
+    return promise.future().compose(keyValueList -> {
       List<KeyValue> keyValues = nullSafeListResult(keyValueList);
       List<Future> futures = new ArrayList<>();
       keyValues
@@ -302,10 +309,6 @@ public class ConsulAsyncMultiMap<K, V> extends ConsulMap<K, V> implements AsyncM
         return resultSet;
       });
     });
-  }
-
-  private static String getRidOfNodeId(String consulKeyPath) {
-    return consulKeyPath.substring(0, consulKeyPath.lastIndexOf("/"));
   }
 
   private ChoosableSet<V> toChoosableSet(Set<V> set) {

@@ -7,9 +7,9 @@ branches:
 jobs:
   include:
     - stage: test
-      name: "Unit tests - OracleJDK 8"
+      name: "Unit tests - OpenJDK 8"
       script: mvn -B -DtestLogLevel=OFF test
-      jdk: oraclejdk8
+      jdk: openjdk8
     - name: "Unit tests - OpenJDK 11"
       if: type != pull_request
       script: mvn -B -DtestLogLevel=OFF test
