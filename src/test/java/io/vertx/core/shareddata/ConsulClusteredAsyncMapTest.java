@@ -77,7 +77,7 @@ public class ConsulClusteredAsyncMapTest extends ClusteredAsyncMapTest {
       assertNotNull(asyncMapHandler.result());
       asyncMapHandler.result().put("//key", "value", handler -> {
         assertTrue(handler.failed());
-        assertEquals("Moved Permanently", handler.cause().getMessage());
+        assertTrue(handler.cause().getMessage().contains("Moved Permanently"));
         complete();
       });
     });

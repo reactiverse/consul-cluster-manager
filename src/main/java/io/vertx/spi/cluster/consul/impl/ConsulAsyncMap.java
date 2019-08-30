@@ -15,10 +15,7 @@
  */
 package io.vertx.spi.cluster.consul.impl;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
+import io.vertx.core.*;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.core.shareddata.AsyncMap;
@@ -39,7 +36,7 @@ import static io.vertx.spi.cluster.consul.impl.ConversationUtils.asTtlConsulEntr
  * <p>
  * Note: given map is used by vertx nodes to share the data,
  * entries of this map are always PERSISTENT and NOT EPHEMERAL.
- *
+ * <p>
  * For ttl handling see {@link TTLMonitor}
  *
  * @author <a href="mailto:roman.levytskyi.oss@gmail.com">Roman Levytskyi</a>
@@ -93,16 +90,16 @@ public class ConsulAsyncMap<K, V> extends ConsulMap<K, V> implements AsyncMap<K,
   @Override
   public void remove(K k, Handler<AsyncResult<V>> asyncResultHandler) {
     assertKeyIsNotNull(k).compose(aVoid -> {
-      Future<V> future = Future.future();
-      get(k, future.completer());
-      return future;
+      Promise<V> promise = Promise.promise();
+      get(k, promise);
+      return promise.future();
     }).compose(v -> {
-      Future<V> future = Future.future();
-      if (v == null) future.complete();
+      Promise<V> promise = Promise.promise();
+      if (v == null) promise.complete();
       else deleteValueByKeyPath(keyPath(k))
         .compose(removeSucceeded -> removeSucceeded ? succeededFuture(v) : failedFuture("Key + " + k + " wasn't removed."))
-        .setHandler(future.completer());
-      return future;
+        .setHandler(promise);
+      return promise.future();
     }).setHandler(asyncResultHandler);
   }
 
@@ -110,9 +107,9 @@ public class ConsulAsyncMap<K, V> extends ConsulMap<K, V> implements AsyncMap<K,
   public void removeIfPresent(K k, V v, Handler<AsyncResult<Boolean>> resultHandler) {
     // removes a value from the map, only if entry already exists with same value.
     assertKeyAndValueAreNotNull(k, v).compose(aVoid -> {
-      Future<V> future = Future.future();
-      get(k, future.completer());
-      return future;
+      Promise<V> promise = Promise.promise();
+      get(k, promise);
+      return promise.future();
     }).compose(value -> {
       if (v.equals(value))
         return deleteValueByKeyPath(keyPath(k))
@@ -125,20 +122,20 @@ public class ConsulAsyncMap<K, V> extends ConsulMap<K, V> implements AsyncMap<K,
   public void replace(K k, V v, Handler<AsyncResult<V>> asyncResultHandler) {
     // replaces the entry only if it is currently mapped to some value.
     assertKeyAndValueAreNotNull(k, v).compose(aVoid -> {
-      Future<V> future = Future.future();
-      get(k, future.completer());
-      return future;
+      Promise<V> promise = Promise.promise();
+      get(k, promise);
+      return promise.future();
     }).compose(value -> {
-      Future<V> future = Future.future();
+      Promise<V> promise = Promise.promise();
       if (value == null) {
-        future.complete();
+        promise.complete();
       } else {
         put(k, v, event -> {
-          if (event.succeeded()) future.complete(value);
-          else future.fail(event.cause());
+          if (event.succeeded()) promise.complete(value);
+          else promise.fail(event.cause());
         });
       }
-      return future;
+      return promise.future();
     }).setHandler(asyncResultHandler);
   }
 
@@ -148,24 +145,24 @@ public class ConsulAsyncMap<K, V> extends ConsulMap<K, V> implements AsyncMap<K,
     assertKeyAndValueAreNotNull(k, oldValue)
       .compose(aVoid -> assertValueIsNotNull(newValue))
       .compose(aVoid -> {
-        Future<V> future = Future.future();
-        get(k, future.completer());
-        return future;
+        Promise<V> promise = Promise.promise();
+        get(k, promise);
+        return promise.future();
       })
       .compose(value -> {
-        Future<Boolean> future = Future.future();
+        Promise<Boolean> promise = Promise.promise();
         if (value != null) {
           if (value.equals(oldValue))
             put(k, newValue, resultPutHandler -> {
               if (resultPutHandler.succeeded())
-                future.complete(true); // old V: '{}' has been replaced by new V: '{}' where K: '{}'", oldValue, newValue, k
+                promise.complete(true); // old V: '{}' has been replaced by new V: '{}' where K: '{}'", oldValue, newValue, k
               else
-                future.fail(resultPutHandler.cause()); // failed replace old V: '{}' by new V: '{}' where K: '{}' due to: '{}'", oldValue, newValue, k, resultPutHandler.cause()
+                promise.fail(resultPutHandler.cause()); // failed replace old V: '{}' by new V: '{}' where K: '{}' due to: '{}'", oldValue, newValue, k, resultPutHandler.cause()
             });
           else
-            future.complete(false); // "An entry with K: '{}' doesn't map to old V: '{}' so it won't get replaced.", k, oldValue);
-        } else future.complete(false); // An entry with K: '{}' doesn't exist,
-        return future;
+            promise.complete(false); // "An entry with K: '{}' doesn't map to old V: '{}' so it won't get replaced.", k, oldValue);
+        } else promise.complete(false); // An entry with K: '{}' doesn't exist,
+        return promise.future();
       })
       .setHandler(resultHandler);
   }
@@ -290,7 +287,7 @@ public class ConsulAsyncMap<K, V> extends ConsulMap<K, V> implements AsyncMap<K,
      * @return
      */
     Future<Void> apply(String keyPath, Optional<Long> ttl) {
-      Future<Void> future = Future.future();
+      Promise<Void> promise = Promise.promise();
       if (ttl.isPresent()) {
         if (log.isDebugEnabled()) {
           log.debug("[" + nodeId + "] : " + "applying ttl monitoring on: " + keyPath + " with ttl: " + ttl.get());
@@ -298,15 +295,15 @@ public class ConsulAsyncMap<K, V> extends ConsulMap<K, V> implements AsyncMap<K,
         String lockName = "ttlLockOn/" + keyPath;
         clusterManager.getLockWithTimeout(lockName, 50, lockObtainedEvent -> {
           setTimer(keyPath, ttl.get(), lockName, lockObtainedEvent);
-          future.complete();
+          promise.complete();
         });
       } else {
         // there's no need to monitor an entry -> no ttl is there.
         // try to remove keyPath from timerMap
         cancelTimer(keyPath);
-        future.complete();
+        promise.complete();
       }
-      return future;
+      return promise.future();
     }
 
     /**

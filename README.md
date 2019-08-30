@@ -37,10 +37,14 @@ Version compatibility matrix
  
 | Cluster manager  | Vert.x |
 | ---------------- | ------ | 
-|  0.1.x           | 3.6.0  | 
-|  0.2.x           | 3.6.1  | 
-|  0.3.x           | 3.6.2  | 
-|  TBR             | 3.6.3  | 
+|  0.1.0           | 3.6.0  | 
+|  0.2.0           | 3.6.1  | 
+|  0.3.0           | 3.6.2  | 
+|  0.4.0           | 3.6.3  | 
+|  1.0.0           | 3.7.0  |
+|  1.1.0           | 3.7.1  | 
+|  1.2.0           | 3.8.0  | 
+|  1.2.1           | 3.8.1  | 
 
 ### Gradle
 ```groovy
@@ -62,7 +66,7 @@ There's more than one way to create an instance of consul cluster manager.
 - Excplicilty specifying configuration: 
 ``` 
 JsonObject options = new JsonObject()
-.put("host", "localhost") // host on which consul agent is running, if not specified default host will be used which is "localhost".
+.put("host", "consulAgentHost") // host on which consul agent is running, if not specified default host will be used which is "localhost".
 .put("port", consulAgentPort) // port on wich consul agent is runing, if not specified default port will be used which is "8500".
 /*
  * There's an option to utilize built-in internal caching. 
