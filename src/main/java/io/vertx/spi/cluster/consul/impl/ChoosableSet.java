@@ -31,8 +31,16 @@ public class ChoosableSet<T> implements ChoosableIterable<T>, Serializable {
   private final Set<T> ids;
   private volatile Iterator<T> iter;
 
-  public ChoosableSet(int initialSize) {
+  private ChoosableSet(int initialSize) {
     ids = new ConcurrentHashSet<>(initialSize);
+  }
+
+  private static ChoosableSet instance;
+  static synchronized <T> ChoosableSet<T> getInstance(int initialSize) {
+    if (instance == null) {
+      instance = new ChoosableSet(initialSize);
+    }
+    return instance;
   }
 
   public Set<T> getIds() {
@@ -43,11 +51,11 @@ public class ChoosableSet<T> implements ChoosableIterable<T>, Serializable {
     return ids.size();
   }
 
-  public void add(T elem) {
+  void add(T elem) {
     ids.add(elem);
   }
 
-  public boolean remove(T elem) {
+  boolean remove(T elem) {
     return ids.remove(elem);
   }
 

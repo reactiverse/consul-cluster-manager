@@ -312,8 +312,8 @@ public class ConsulAsyncMultiMap<K, V> extends ConsulMap<K, V> implements AsyncM
   }
 
   private ChoosableSet<V> toChoosableSet(Set<V> set) {
-    ChoosableSet<V> choosableSet = new ChoosableSet<>(set.size());
-    set.forEach(choosableSet::add);
+    ChoosableSet<V> choosableSet = ChoosableSet.getInstance(set.size());
+    choosableSet.merge(set);
     return choosableSet;
   }
 
@@ -325,7 +325,7 @@ public class ConsulAsyncMultiMap<K, V> extends ConsulMap<K, V> implements AsyncM
 
   private void addEntryToCache(K key, V value) {
     ChoosableSet<V> choosableSet = cache.get(key);
-    if (choosableSet == null) choosableSet = new ChoosableSet<>(1);
+    if (choosableSet == null) choosableSet = ChoosableSet.getInstance(1);
     choosableSet.add(value);
     cache.put(key, choosableSet);
     if (log.isTraceEnabled()) {
