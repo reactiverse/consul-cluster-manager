@@ -82,6 +82,7 @@ public class ConsulAsyncMultiMap<K, V> extends ConsulMap<K, V> implements AsyncM
    * Note: local cache updates still might kick in through consul watch in case update succeeded in consul agent but wasn't yet acknowledged back to node. Eventually last write wins.
    */
   private ConcurrentMap<K, ChoosableSet<V>> cache;
+  private ChoosableSet<V> subs = new ChoosableSet<>(0);
 
   public ConsulAsyncMultiMap(String name, boolean preferConsistency, ClusterManagerInternalContext appContext) {
     super(name, appContext);
@@ -94,9 +95,6 @@ public class ConsulAsyncMultiMap<K, V> extends ConsulMap<K, V> implements AsyncM
     }
   }
 
-  private static String getRidOfNodeId(String consulKeyPath) {
-    return consulKeyPath.substring(0, consulKeyPath.lastIndexOf("/"));
-  }
 
   @Override
   public void add(K k, V v, Handler<AsyncResult<Void>> completionHandler) {
@@ -148,7 +146,7 @@ public class ConsulAsyncMultiMap<K, V> extends ConsulMap<K, V> implements AsyncM
   public void get(K k, Handler<AsyncResult<ChoosableIterable<V>>> resultHandler) {
     assertKeyIsNotNull(k)
       .compose(aVoid -> doGet(k))
-      .compose(vs -> succeededFuture((ChoosableIterable<V>) vs))
+      .compose(vs -> succeededFuture((ChoosableIterable<V>) subs.copy(vs.getIds())))
       .setHandler(resultHandler);
   }
 
@@ -309,6 +307,10 @@ public class ConsulAsyncMultiMap<K, V> extends ConsulMap<K, V> implements AsyncM
         return resultSet;
       });
     });
+  }
+
+  private static String getRidOfNodeId(String consulKeyPath) {
+    return consulKeyPath.substring(0, consulKeyPath.lastIndexOf("/"));
   }
 
   private ChoosableSet<V> toChoosableSet(Set<V> set) {

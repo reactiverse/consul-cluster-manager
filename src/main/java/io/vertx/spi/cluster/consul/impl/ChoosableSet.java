@@ -28,7 +28,7 @@ import java.util.Set;
  */
 public class ChoosableSet<T> implements ChoosableIterable<T>, Serializable {
 
-  private final Set<T> ids;
+  private Set<T> ids;
   private volatile Iterator<T> iter;
 
   public ChoosableSet(int initialSize) {
@@ -68,6 +68,14 @@ public class ChoosableSet<T> implements ChoosableIterable<T>, Serializable {
     return ids.iterator();
   }
 
+  ChoosableSet<T> copy(Set<T> ids) {
+    if (this.ids.size() > ids.size()) {
+      iter = ids.iterator();
+    }
+    this.ids = ids;
+    return this;
+  }
+
   public synchronized T choose() {
     if (!ids.isEmpty()) {
       if (iter == null || !iter.hasNext()) {
@@ -82,6 +90,7 @@ public class ChoosableSet<T> implements ChoosableIterable<T>, Serializable {
       return null;
     }
   }
+
 
   @Override
   public String toString() {
