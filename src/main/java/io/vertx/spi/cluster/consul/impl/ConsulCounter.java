@@ -57,7 +57,7 @@ public class ConsulCounter extends ConsulMap<String, Long> implements Counter {
     Objects.requireNonNull(resultHandler);
     getPlainValue(consulKey)
       .map(this::extractActualCounterValue)
-      .setHandler(resultHandler);
+      .onComplete(resultHandler);
   }
 
   @Override
@@ -98,13 +98,13 @@ public class ConsulCounter extends ConsulMap<String, Long> implements Counter {
         Promise<Boolean> promise = Promise.promise();
         final Long preValue = extractActualCounterValue(keyValue);
         if (preValue == expected) {
-          putPlainValue(consulKey, String.valueOf(value), null).setHandler(promise);
+          putPlainValue(consulKey, String.valueOf(value), null).onComplete(promise);
         } else {
           promise.complete(false);
         }
         return promise.future();
       })
-      .setHandler(resultHandler);
+      .onComplete(resultHandler);
   }
 
   /**
@@ -118,7 +118,7 @@ public class ConsulCounter extends ConsulMap<String, Long> implements Counter {
         final Long preValue = extractActualCounterValue(keyValue);
         final Long postValue = preValue + value;
         putPlainValue(consulKey, String.valueOf(postValue), new KeyValueOptions().setCasIndex(keyValue.getModifyIndex()))
-          .setHandler(putRes -> {
+          .onComplete(putRes -> {
             if (putRes.succeeded()) {
               if (putRes.result()) {
                 result.complete(postGet ? postValue : preValue);
@@ -132,7 +132,7 @@ public class ConsulCounter extends ConsulMap<String, Long> implements Counter {
           });
         return result.future();
       })
-      .setHandler(resultHandler);
+      .onComplete(resultHandler);
   }
 
   /**

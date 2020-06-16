@@ -101,7 +101,7 @@ public class ConsulAsyncMultiMap<K, V> extends ConsulMap<K, V> implements AsyncM
     assertKeyAndValueAreNotNull(k, v)
       .compose(aVoid -> getAllByKey(keyPathForAllByAddressAndByNodeId(k, appContext.getNodeId())))
       .compose(vs -> doAdd(k, v, vs))
-      .setHandler(completionHandler);
+      .onComplete(completionHandler);
   }
 
   @Override
@@ -119,7 +119,7 @@ public class ConsulAsyncMultiMap<K, V> extends ConsulMap<K, V> implements AsyncM
           return true;
         });
       })
-      .setHandler(completionHandler);
+      .onComplete(completionHandler);
   }
 
   @Override
@@ -139,7 +139,7 @@ public class ConsulAsyncMultiMap<K, V> extends ConsulMap<K, V> implements AsyncM
             }
           }));
         return CompositeFuture.all(futures).compose(compositeFuture -> Future.<Void>succeededFuture());
-      }).setHandler(completionHandler);
+      }).onComplete(completionHandler);
   }
 
   @Override
@@ -147,7 +147,7 @@ public class ConsulAsyncMultiMap<K, V> extends ConsulMap<K, V> implements AsyncM
     assertKeyIsNotNull(k)
       .compose(aVoid -> doGet(k))
       .compose(vs -> succeededFuture((ChoosableIterable<V>) subs.copy(vs.getIds())))
-      .setHandler(resultHandler);
+      .onComplete(resultHandler);
   }
 
   /**

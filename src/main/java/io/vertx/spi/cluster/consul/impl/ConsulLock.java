@@ -85,7 +85,7 @@ public class ConsulLock extends ConsulMap<String, String> implements Lock {
 
   @Override
   public void release() {
-    destroySession(sessionId).setHandler(event -> {
+    destroySession(sessionId).onComplete(event -> {
       if (event.succeeded()) {
         if (log.isDebugEnabled()) {
           log.debug("[" + appContext.getNodeId() + "] has released lock on: " + lockName);

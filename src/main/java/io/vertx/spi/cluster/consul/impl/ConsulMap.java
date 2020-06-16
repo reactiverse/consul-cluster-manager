@@ -365,7 +365,7 @@ public abstract class ConsulMap<K, V> extends ConsulMapListener {
    */
   protected <T> T completeAndGet(Future<T> future, long timeout) {
     CompletableFuture<T> completableFuture = new CompletableFuture<>();
-    future.setHandler(event -> {
+    future.onComplete(event -> {
       if (event.succeeded()) completableFuture.complete(event.result());
       else completableFuture.completeExceptionally(event.cause());
     });
