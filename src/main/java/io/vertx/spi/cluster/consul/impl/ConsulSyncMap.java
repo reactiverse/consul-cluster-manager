@@ -99,7 +99,7 @@ public final class ConsulSyncMap<K, V> extends ConsulMap<K, V> implements Map<K,
 
   // async version of clear - can be executed directly on event loop.
   public void clear(Handler<AsyncResult<Void>> handler) {
-    deleteAll().setHandler(handler);
+    deleteAll().onComplete(handler);
   }
 
   @Override

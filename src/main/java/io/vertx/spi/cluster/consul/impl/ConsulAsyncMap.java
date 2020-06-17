@@ -56,7 +56,7 @@ public class ConsulAsyncMap<K, V> extends ConsulMap<K, V> implements AsyncMap<K,
   public void get(K k, Handler<AsyncResult<V>> asyncResultHandler) {
     assertKeyIsNotNull(k)
       .compose(aVoid -> getValue(k))
-      .setHandler(asyncResultHandler);
+      .onComplete(asyncResultHandler);
   }
 
   @Override
@@ -64,7 +64,7 @@ public class ConsulAsyncMap<K, V> extends ConsulMap<K, V> implements AsyncMap<K,
     assertKeyAndValueAreNotNull(k, v)
       .compose(aVoid -> putValue(k, v, null, Optional.empty()))
       .compose(putSucceeded -> putSucceeded ? Future.<Void>succeededFuture() : failedFuture(k.toString() + "wasn't put to: " + name))
-      .setHandler(completionHandler);
+      .onComplete(completionHandler);
   }
 
   @Override
@@ -72,19 +72,19 @@ public class ConsulAsyncMap<K, V> extends ConsulMap<K, V> implements AsyncMap<K,
     assertKeyAndValueAreNotNull(k, v)
       .compose(id -> putValue(k, v, null, Optional.of(ttl)))
       .compose(putSucceeded -> putSucceeded ? succeededFuture() : Future.<Void>failedFuture(k.toString() + "wasn't put to " + name))
-      .setHandler(completionHandler);
+      .onComplete(completionHandler);
   }
 
   @Override
   public void putIfAbsent(K k, V v, Handler<AsyncResult<V>> completionHandler) {
-    putIfAbsent(k, v, Optional.empty()).setHandler(completionHandler);
+    putIfAbsent(k, v, Optional.empty()).onComplete(completionHandler);
   }
 
   @Override
   public void putIfAbsent(K k, V v, long ttl, Handler<AsyncResult<V>> completionHandler) {
     assertKeyAndValueAreNotNull(k, v)
       .compose(aVoid -> putIfAbsent(k, v, Optional.of(ttl)))
-      .setHandler(completionHandler);
+      .onComplete(completionHandler);
   }
 
   @Override
@@ -98,9 +98,9 @@ public class ConsulAsyncMap<K, V> extends ConsulMap<K, V> implements AsyncMap<K,
       if (v == null) promise.complete();
       else deleteValueByKeyPath(keyPath(k))
         .compose(removeSucceeded -> removeSucceeded ? succeededFuture(v) : failedFuture("Key + " + k + " wasn't removed."))
-        .setHandler(promise);
+        .onComplete(promise);
       return promise.future();
-    }).setHandler(asyncResultHandler);
+    }).onComplete(asyncResultHandler);
   }
 
   @Override
@@ -115,7 +115,7 @@ public class ConsulAsyncMap<K, V> extends ConsulMap<K, V> implements AsyncMap<K,
         return deleteValueByKeyPath(keyPath(k))
           .compose(removeSucceeded -> removeSucceeded ? succeededFuture(true) : failedFuture("Key + " + k + " wasn't removed."));
       else return succeededFuture(false);
-    }).setHandler(resultHandler);
+    }).onComplete(resultHandler);
   }
 
   @Override
@@ -136,7 +136,7 @@ public class ConsulAsyncMap<K, V> extends ConsulMap<K, V> implements AsyncMap<K,
         });
       }
       return promise.future();
-    }).setHandler(asyncResultHandler);
+    }).onComplete(asyncResultHandler);
   }
 
   @Override
@@ -164,32 +164,32 @@ public class ConsulAsyncMap<K, V> extends ConsulMap<K, V> implements AsyncMap<K,
         } else promise.complete(false); // An entry with K: '{}' doesn't exist,
         return promise.future();
       })
-      .setHandler(resultHandler);
+      .onComplete(resultHandler);
   }
 
   @Override
   public void clear(Handler<AsyncResult<Void>> resultHandler) {
-    deleteAll().setHandler(resultHandler);
+    deleteAll().onComplete(resultHandler);
   }
 
   @Override
   public void size(Handler<AsyncResult<Integer>> resultHandler) {
-    plainKeys().compose(list -> succeededFuture(list.size())).setHandler(resultHandler);
+    plainKeys().compose(list -> succeededFuture(list.size())).onComplete(resultHandler);
   }
 
   @Override
   public void keys(Handler<AsyncResult<Set<K>>> asyncResultHandler) {
-    entries().compose(kvMap -> succeededFuture(kvMap.keySet())).setHandler(asyncResultHandler);
+    entries().compose(kvMap -> succeededFuture(kvMap.keySet())).onComplete(asyncResultHandler);
   }
 
   @Override
   public void values(Handler<AsyncResult<List<V>>> asyncResultHandler) {
-    entries().compose(kvMap -> Future.<List<V>>succeededFuture(new ArrayList<>(kvMap.values())).setHandler(asyncResultHandler));
+    entries().compose(kvMap -> Future.<List<V>>succeededFuture(new ArrayList<>(kvMap.values())).onComplete(asyncResultHandler));
   }
 
   @Override
   public void entries(Handler<AsyncResult<Map<K, V>>> asyncResultHandler) {
-    entries().setHandler(asyncResultHandler);
+    entries().onComplete(asyncResultHandler);
   }
 
   @Override
@@ -355,7 +355,7 @@ public class ConsulAsyncMap<K, V> extends ConsulMap<K, V> implements AsyncMap<K,
     private void deleteTTLEntry(String keyPath, Lock lock) {
       clusterManager.getAsyncMap(mapName, asyncMapEvent -> {
         ConsulAsyncMap asyncMap = (ConsulAsyncMap) asyncMapEvent.result();
-        asyncMap.deleteValueByKeyPath(keyPath).setHandler(deleteResult -> {
+        asyncMap.deleteValueByKeyPath(keyPath).onComplete(deleteResult -> {
           lock.release();
           timerMap.remove(keyPath);
         });

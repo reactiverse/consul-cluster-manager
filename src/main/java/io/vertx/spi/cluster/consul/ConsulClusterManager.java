@@ -63,6 +63,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
@@ -88,7 +89,6 @@ public class ConsulClusterManager extends ConsulMap<String, String> implements C
   private static final Logger log = LoggerFactory.getLogger(ConsulClusterManager.class);
   private static final String HA_INFO_MAP_NAME = "__vertx.haInfo";
   private static final String NODES_MAP_NAME = "__vertx.nodes";
-  private static final String SERVICE_NAME = "vert.x-cluster-manager";
   private static final long TCP_CHECK_INTERVAL = 10_000;
   /*
    * We have to lock the "node joining the cluster" and "node leaving the cluster" operations
@@ -112,6 +112,7 @@ public class ConsulClusterManager extends ConsulMap<String, String> implements C
   private final Map<String, AsyncMap<?, ?>> asyncMaps = new ConcurrentHashMap<>();
   private final Map<String, AsyncMultiMap<?, ?>> asyncMultiMaps = new ConcurrentHashMap<>();
   private final JsonObject consulClusterManagerConfig;
+  private final String serviceName;
   /*
    * A set that attempts to keep all cluster node's data locally cached. Cluster manager
    * watches the consul "__vertx.nodes" path, responds to update/create/delete events, pull down the data.
@@ -139,9 +140,9 @@ public class ConsulClusterManager extends ConsulMap<String, String> implements C
    */
   private final boolean preferConsistency;
 
-  private String checkId; // tcp consul check id
+  private final String checkId; // tcp consul check id
   private NetServer tcpServer; // dummy TCP server to receive and acknowledge heart beats messages from consul.
-  private JsonObject nodeTcpAddress = new JsonObject(); // node's tcp address.
+  private final JsonObject nodeTcpAddress = new JsonObject(); // node's tcp address.
   private volatile boolean active; // identifies whether cluster manager is active or passive.
   private NodeListener nodeListener;
 
@@ -168,6 +169,7 @@ public class ConsulClusterManager extends ConsulMap<String, String> implements C
       .setNodeId(UUID.randomUUID().toString());
     this.checkId = appContext.getNodeId();
     this.preferConsistency = config.containsKey("preferConsistency") ? config.getBoolean("preferConsistency") : false;
+    this.serviceName = config.getString("serviceName", "vert.x-cluster-manager");
   }
 
   /**
@@ -188,7 +190,7 @@ public class ConsulClusterManager extends ConsulMap<String, String> implements C
     Promise<AsyncMultiMap<K, V>> promiseAsyncMultiMap = Promise.promise();
     AsyncMultiMap asyncMultiMap = asyncMultiMaps.computeIfAbsent(name, key -> new ConsulAsyncMultiMap<>(name, preferConsistency, appContext));
     promiseAsyncMultiMap.complete(asyncMultiMap);
-    promiseAsyncMultiMap.future().setHandler(asyncResultHandler);
+    promiseAsyncMultiMap.future().onComplete(asyncResultHandler);
   }
 
   @Override
@@ -196,7 +198,7 @@ public class ConsulClusterManager extends ConsulMap<String, String> implements C
     Promise<AsyncMap<K, V>> promiseAsyncMap = Promise.promise();
     AsyncMap asyncMap = asyncMaps.computeIfAbsent(name, key -> new ConsulAsyncMap<>(name, appContext, this));
     promiseAsyncMap.complete(asyncMap);
-    promiseAsyncMap.future().setHandler(asyncResultHandler);
+    promiseAsyncMap.future().onComplete(asyncResultHandler);
   }
 
   @Override
@@ -235,7 +237,7 @@ public class ConsulClusterManager extends ConsulMap<String, String> implements C
     Promise<Counter> counterFuture = Promise.promise();
     Counter counter = counters.computeIfAbsent(name, key -> new ConsulCounter(name, appContext));
     counterFuture.complete(counter);
-    counterFuture.future().setHandler(resultHandler);
+    counterFuture.future().onComplete(resultHandler);
   }
 
   @Override
@@ -304,7 +306,7 @@ public class ConsulClusterManager extends ConsulMap<String, String> implements C
           return clearHaInfoMap();
         })
         .compose(aVoid -> addLocalNode(nodeTcpAddress))
-        .setHandler(nodeJoinedEvent -> {
+        .onComplete(nodeJoinedEvent -> {
           if (nodeJoinedEvent.succeeded())
             resultHandler.handle(succeededFuture());
           else {
@@ -346,7 +348,7 @@ public class ConsulClusterManager extends ConsulMap<String, String> implements C
           log.debug("[" + appContext.getNodeId() + "] has left the cluster.");
           return Future.<Void>succeededFuture();
         })
-        .setHandler(resultHandler);
+        .onComplete(resultHandler);
     } else {
       log.warn(appContext.getNodeId() + "' is NOT active.");
       resultHandler.handle(Future.succeededFuture());
@@ -545,9 +547,9 @@ public class ConsulClusterManager extends ConsulMap<String, String> implements C
   private Future<Void> registerService() {
     Promise<Void> promise = Promise.promise();
     ServiceOptions serviceOptions = new ServiceOptions();
-    serviceOptions.setName(SERVICE_NAME);
+    serviceOptions.setName(this.serviceName);
     serviceOptions.setTags(Collections.singletonList("vertx-clustering"));
-    serviceOptions.setId(SERVICE_NAME);
+    serviceOptions.setId(this.serviceName);
 
     appContext.getConsulClient().registerService(serviceOptions, asyncResult -> {
       if (asyncResult.failed()) {
@@ -576,7 +578,7 @@ public class ConsulClusterManager extends ConsulMap<String, String> implements C
       .setNotes("This check is dedicated to service with id: " + appContext.getNodeId())
       .setId(checkId)
       .setTcp(nodeTcpAddress.getString("host") + ":" + nodeTcpAddress.getInteger("port"))
-      .setServiceId(SERVICE_NAME)
+      .setServiceId(this.serviceName)
       .setInterval(TimeUnit.MILLISECONDS.toSeconds(TCP_CHECK_INTERVAL) + "s")
       .setStatus(CheckStatus.PASSING);
     appContext.getConsulClient().registerCheck(checkOptions, result -> {
@@ -610,17 +612,16 @@ public class ConsulClusterManager extends ConsulMap<String, String> implements C
    */
   private Future<Void> deregisterFailingTcpChecks() {
     Promise<CheckList> checkListPromise = Promise.promise();
-    appContext.getConsulClient().healthChecks(SERVICE_NAME, checkListPromise);
+    appContext.getConsulClient().healthChecks(this.serviceName, checkListPromise);
     return checkListPromise.future().compose(checkList -> {
-      List<Future> futures = new ArrayList<>();
-      checkList.getList().forEach(check -> {
-        if (check.getStatus() == CheckStatus.CRITICAL) {
+      List<Future> futures = checkList.getList().stream()
+        .filter(check -> check.getStatus() == CheckStatus.CRITICAL)
+        .map(check -> {
           Promise<Void> promise = Promise.promise();
           appContext.getConsulClient().deregisterCheck(check.getId(), promise);
-          futures.add(promise.future());
-        }
-      });
-      return CompositeFuture.all(futures).compose(compositeFuture -> Future.succeededFuture());
+          return promise.future();
+        }).collect(Collectors.toList());
+      return CompositeFuture.all(futures).mapEmpty();
     });
   }
 }
