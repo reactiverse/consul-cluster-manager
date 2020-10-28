@@ -64,7 +64,7 @@
 
   <properties>
     <stack.version>3.9.1</stack.version>
-    <junit.version>4.12</junit.version>
+    <junit.version>4.13.1</junit.version>
     <embedded.consul.version>2.1.2</embedded.consul.version>
   </properties>
 
